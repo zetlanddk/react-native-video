@@ -42,14 +42,15 @@ yarn add react-native-video
 
 Then follow the instructions for your platform to link react-native-video into your project:
 
+### iOS
 <details>
-  <summary>iOS</summary>
+  <summary>iOS details</summary>
 
-### Standard Method
+#### Standard Method
 
 Run `react-native link react-native-video` to link the react-native-video library.
 
-### Using CocoaPods (required to enable caching)
+#### Using CocoaPods (required to enable caching)
 
 Setup your Podfile like it is described in the [react-native documentation](https://facebook.github.io/react-native/docs/integration-with-existing-apps#configuring-cocoapods-dependencies). 
 
@@ -73,8 +74,9 @@ end
 
 </details>
 
-<details>
-  <summary>tvOS</summary>
+### tvOS
+  <details>
+  <summary>tvOS details</summary>
   
 `react-native link react-native-video` doesn’t work properly with the tvOS target so we need to add the library manually.
 
@@ -95,14 +97,15 @@ Select RCTVideo-tvOS
 <img src="./docs/tvOS-step-4.jpg" width="40%">
 </details>
 
+### Android
 <details>
-  <summary>Android</summary>
+  <summary>Android details</summary>
 
 Run `react-native link react-native-video` to link the react-native-video library.
 
 Or if you have trouble, make the following additions to the given files manually:
 
-**android/settings.gradle**
+#### **android/settings.gradle**
 
 The newer ExoPlayer library will work for most people.
 
@@ -119,16 +122,29 @@ project(':react-native-video').projectDir = new File(rootProject.projectDir, '..
 ```
 
 
-**android/app/build.gradle**
+#### **android/app/build.gradle**
 
-```gradle
+From version >= 5.0.0, you have to apply this changes:
+
+```diff
 dependencies {
    ...
-   compile project(':react-native-video')
+    compile project(':react-native-video')
+    implementation "com.android.support:appcompat-v7:${rootProject.ext.supportLibVersion}"
+
 }
 ```
 
-**MainApplication.java**
+#### **android/gradle.properties**
+
+Migrating to AndroidX (needs version >= 5.0.0):
+
+```gradle.properties
+android.useAndroidX=true
+android.enableJetifier=true
+```
+
+#### **MainApplication.java**
 
 On top, where imports are:
 
@@ -149,12 +165,13 @@ protected List<ReactPackage> getPackages() {
 ```
 </details>
 
+### Windows
 <details>
-  <summary>Windows</summary>
+  <summary>Windows details</summary>
 
 Make the following additions to the given files manually:
 
-**windows/myapp.sln**
+#### **windows/myapp.sln**
 
 Add the `ReactNativeVideo` project to your solution.
 
@@ -163,7 +180,7 @@ Add the `ReactNativeVideo` project to your solution.
   * UWP: Select `node_modules\react-native-video\windows\ReactNativeVideo\ReactNativeVideo.csproj`
   * WPF: Select `node_modules\react-native-video\windows\ReactNativeVideo.Net46\ReactNativeVideo.Net46.csproj`
 
-**windows/myapp/myapp.csproj**
+#### **windows/myapp/myapp.csproj**
 
 Add a reference to `ReactNativeVideo` to your main application project. From Visual Studio 2015:
 
@@ -171,7 +188,7 @@ Add a reference to `ReactNativeVideo` to your main application project. From Vis
   * UWP: Check `ReactNativeVideo` from Solution Projects.
   * WPF: Check `ReactNativeVideo.Net46` from Solution Projects.
 
-**MainPage.cs**
+#### **MainPage.cs**
 
 Add the `ReactVideoPackage` class to your list of exported packages.
 ```cs
@@ -198,12 +215,13 @@ using System.Collections.Generic;
 ```
 </details>
 
+### react-native-dom
 <details>
-  <summary>react-native-dom</summary>
+  <summary>react-native-dom details</summary>
 
 Make the following additions to the given files manually:
 
-**dom/bootstrap.js**
+#### **dom/bootstrap.js**
 
 Import RCTVideoManager and add it to the list of nativeModules:
 
@@ -302,7 +320,9 @@ var styles = StyleSheet.create({
 * [onFullscreenPlayerDidDismiss](#onfullscreenplayerdiddismiss)
 * [onLoad](#onload)
 * [onLoadStart](#onloadstart)
+* [onReadyForDisplay](#onreadyfordisplay)
 * [onPictureInPictureStatusChanged](#onpictureinpicturestatuschanged)
+* [onPlaybackRateChange](#onplaybackratechange)
 * [onProgress](#onprogress)
 * [onSeek](#onseek)
 * [onRestoreUserInterfaceForPictureInPictureStop](#onrestoreuserinterfaceforpictureinpicturestop)
@@ -367,6 +387,13 @@ Note on iOS, controls are always shown when in fullscreen mode.
 For Android MediaPlayer, you will need to build your own controls or use a package like [react-native-video-controls](https://github.com/itsnubix/react-native-video-controls) or [react-native-video-player](https://github.com/cornedor/react-native-video-player).
 
 Platforms: Android ExoPlayer, iOS, react-native-dom
+
+#### disableFocus
+Determines whether video audio should override background music/audio in Android devices.
+* ** false (default)** - Override background audio/music
+* **true** - Let background audio/music from other apps play
+
+Platforms: Android Exoplayer
 
 #### filter
 Add video filter
@@ -953,6 +980,17 @@ Example:
 
 Platforms: all
 
+#### onReadyForDisplay
+Callback function that is called when the first video frame is ready for display. This is when the poster is removed.
+
+Payload: none
+
+* iOS: [readyForDisplay](https://developer.apple.com/documentation/avkit/avplayerviewcontroller/1615830-readyfordisplay?language=objc)
+* Android: [MEDIA_INFO_VIDEO_RENDERING_START](https://developer.android.com/reference/android/media/MediaPlayer#MEDIA_INFO_VIDEO_RENDERING_START)
+* Android ExoPlayer [STATE_READY](https://exoplayer.dev/doc/reference/com/google/android/exoplayer2/Player.html#STATE_READY)
+
+Platforms: Android ExoPlayer, Android MediaPlayer, iOS, Web
+
 #### onPictureInPictureStatusChanged
 Callback function that is called when picture in picture becomes active or inactive.
 
@@ -968,6 +1006,23 @@ isActive: true
 ```
 
 Platforms:  iOS
+
+#### onPlaybackRateChange
+Callback function that is called when the rate of playback changes - either paused or starts/resumes.
+
+Property | Type | Description
+--- | --- | ---
+playbackRate | number | 0 when playback is paused, 1 when playing at normal speed. Other values when playback is slowed down or sped up
+
+Example:
+```
+{
+  playbackRate: 0, // indicates paused
+}
+```
+
+Platforms: all
+
 
 #### onProgress
 Callback function that is called every progressUpdateInterval seconds with info about which position the media is currently playing.
