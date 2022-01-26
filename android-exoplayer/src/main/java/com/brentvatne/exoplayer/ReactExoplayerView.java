@@ -122,6 +122,7 @@ class ReactExoplayerView extends FrameLayout implements
     private boolean isPaused;
     private boolean isBuffering;
     private boolean muted = false;
+    private boolean hasAudioFocus = false;
     private float rate = 1f;
     private float audioVolume = 1f;
     private int minLoadRetryCount = 3;
@@ -464,6 +465,7 @@ class ReactExoplayerView extends FrameLayout implements
                     player.prepare(mediaSource, !haveResumePosition, false);
                     playerNeedsSource = false;
 
+                    reLayout(exoPlayerView);
                     eventEmitter.loadStart();
                     loadVideoStarted = true;
                 }
@@ -575,7 +577,7 @@ class ReactExoplayerView extends FrameLayout implements
     }
 
     private boolean requestAudioFocus() {
-        if (disableFocus || srcUri == null) {
+        if (disableFocus || srcUri == null || this.hasAudioFocus) {
             return true;
         }
         int result = audioManager.requestAudioFocus(this,
@@ -590,8 +592,8 @@ class ReactExoplayerView extends FrameLayout implements
         }
 
         if (playWhenReady) {
-            boolean hasAudioFocus = requestAudioFocus();
-            if (hasAudioFocus) {
+            this.hasAudioFocus = requestAudioFocus();
+            if (this.hasAudioFocus) {
                 player.setPlayWhenReady(true);
             }
         } else {
@@ -686,6 +688,7 @@ class ReactExoplayerView extends FrameLayout implements
     public void onAudioFocusChange(int focusChange) {
         switch (focusChange) {
             case AudioManager.AUDIOFOCUS_LOSS:
+                this.hasAudioFocus = false;
                 eventEmitter.audioFocusChanged(false);
                 pausePlayback();
                 audioManager.abandonAudioFocus(this);
@@ -694,6 +697,7 @@ class ReactExoplayerView extends FrameLayout implements
                 eventEmitter.audioFocusChanged(false);
                 break;
             case AudioManager.AUDIOFOCUS_GAIN:
+                this.hasAudioFocus = true;
                 eventEmitter.audioFocusChanged(true);
                 break;
             default:
@@ -1009,7 +1013,6 @@ class ReactExoplayerView extends FrameLayout implements
 
     public void setSrc(final Uri uri, final String extension, Map<String, String> headers) {
         if (uri != null) {
-            boolean isOriginalSourceNull = srcUri == null;
             boolean isSourceEqual = uri.equals(srcUri);
 
             this.srcUri = uri;
@@ -1019,9 +1022,20 @@ class ReactExoplayerView extends FrameLayout implements
                     DataSourceUtil.getDefaultDataSourceFactory(this.themedReactContext, bandwidthMeter,
                             this.requestHeaders);
 
-            if (!isOriginalSourceNull && !isSourceEqual) {
+            if (!isSourceEqual) {
                 reloadSource();
             }
+        }
+    }
+
+    public void clearSrc() {
+        if (srcUri != null) {
+            player.stop(true);
+            this.srcUri = null;
+            this.extension = null;
+            this.requestHeaders = null;
+            this.mediaDataSourceFactory = null;
+            clearResumePosition();
         }
     }
 
@@ -1035,14 +1049,13 @@ class ReactExoplayerView extends FrameLayout implements
 
     public void setRawSrc(final Uri uri, final String extension) {
         if (uri != null) {
-            boolean isOriginalSourceNull = srcUri == null;
             boolean isSourceEqual = uri.equals(srcUri);
 
             this.srcUri = uri;
             this.extension = extension;
             this.mediaDataSourceFactory = buildDataSourceFactory(true);
 
-            if (!isOriginalSourceNull && !isSourceEqual) {
+            if (!isSourceEqual) {
                 reloadSource();
             }
         }
